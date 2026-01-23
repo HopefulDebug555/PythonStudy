@@ -1,7 +1,7 @@
 '''
 Author: ZXG
 Date: 2026-01-23 09:02:17
-LastEditTime: 2026-01-23 10:32:12
+LastEditTime: 2026-01-23 14:39:25
 LastEditors: ZXG
 Description: 
 FilePath: /PythonStudy/alien_invasion.py
@@ -14,7 +14,9 @@ import pygame
 #包含游戏设置的类 
 from setting import Setting
 from ship import Ship
+from bullet import Bullet
 
+#调试模式开关
 DEBUG = True
 
 class AlienInvasion:
@@ -36,6 +38,9 @@ class AlienInvasion:
             self.setting.screen_width = self.screen.get_rect().width
             self.setting.screen_height = self.screen.get_rect().height
 
+        #创建一个用于存储子弹的编组
+        self.bullets = pygame.sprite.Group()
+        
         #设置窗口标题
         pygame.display.set_caption("Alien Invasion")
         
@@ -45,9 +50,11 @@ class AlienInvasion:
         """开始游戏的主循环"""
         #游戏主循环
         while True:
-            self._check_events()
-            self.ship.update()
-            self._update_screen()
+            
+            self._check_events()    #检查键盘和鼠标事件
+            self.ship.update()      #更新飞船位置
+            self.update_bullets()   #更新子弹位置
+            self._update_screen()   #更新屏幕上的图像
             #设置每秒钟循环60次
             self.clock.tick(60)
             
@@ -77,6 +84,9 @@ class AlienInvasion:
         elif event.key == pygame.K_q:
             #按下q键退出游戏
             sys.exit()
+        elif event.key == pygame.K_SPACE:
+            #按下空格键发射子弹
+            self._fire_bullet()
 
     def _check_keyup_events(self, event):
         """响应按键松开事件"""
@@ -89,11 +99,30 @@ class AlienInvasion:
 
     #函数名带_表示这是一个私有方法 只能在类的内部调用                  
     def _update_screen(self):
+        """更新屏幕上的图像 并切换到新屏幕"""
         #每次循环都重绘屏幕并更新屏幕 背景色bg_color
         self.screen.fill(self.setting.bg_color)
+        #更新子弹位置 并绘制子弹
+        for bullet in self.bullets.sprites():
+            bullet.draw_bullet()
         #绘制飞船
         self.ship.blitme()  
         pygame.display.flip()
+
+    def _fire_bullet(self):
+        """创建一颗子弹 并将其加入编组bullets中 开火"""
+        if len(self.bullets) < self.setting.bullets_allowed:  #限制屏幕上最多只能有3颗子弹
+            new_bullet = Bullet(self)
+            self.bullets.add(new_bullet)
+
+    def update_bullets(self):
+        """更新子弹的位置 并删除已消失的子弹"""
+        #更新子弹位置
+        self.bullets.update()
+        #删除已消失的子弹
+        for bullet in self.bullets.copy():
+            if bullet.rect.bottom <= 0:
+                self.bullets.remove(bullet)
 
 
 #如果直接运行这个文件，就创建一个游戏实例并运行游戏      
