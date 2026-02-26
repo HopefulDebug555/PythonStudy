@@ -62,8 +62,8 @@ class AlienInvasion:
             
             self._check_events()    #检查键盘和鼠标事件
             self.ship.update()      #更新飞船位置
-            self.update_bullets()   #更新子弹位置
-            self.update_aliens()     #更新外星人位置
+            self._update_bullets()   #更新子弹位置
+            self._update_aliens()     #更新外星人位置
             self._update_screen()   #更新屏幕上的图像
             #设置每秒钟循环60次
             self.clock.tick(60)
@@ -155,7 +155,7 @@ class AlienInvasion:
         new_alien.rect.y = y_position
         self.aliens.add(new_alien)
 
-    def update_aliens(self):
+    def _update_aliens(self):
         """更新外星人群中所有外星人的位置"""
         self.check_fleet_edges()  #检查外星人是否到达边缘
         #更新外星人位置
@@ -175,7 +175,7 @@ class AlienInvasion:
         self.setting.fleet_direction *= -1
 
 
-    def update_bullets(self):
+    def _update_bullets(self):
         """更新子弹的位置 并删除已消失的子弹"""
         #更新子弹位置
         self.bullets.update()
@@ -183,6 +183,23 @@ class AlienInvasion:
         for bullet in self.bullets.copy():
             if bullet.rect.bottom <= 0:
                 self.bullets.remove(bullet)
+        self._check_bullet_alien_collisions()  #检查子弹和外星人之间的碰撞
+
+    def _check_bullet_alien_collisions(self):
+        """检查子弹和外星人之间的碰撞"""
+        #检查子弹和外星人之间的碰撞 如果有就删除相应的子弹和外星人
+        #pygame.sprite.groupcollide()：Pygame 提供的函数，用于检测两个精灵组之间所有发生碰撞的精灵，并返回碰撞结果。
+        #self.bullets：第一个精灵组，通常包含所有子弹。
+        #self.aliens：第二个精灵组，包含所有外星人。
+        #第一个 True：dokill1 参数，表示当子弹与外星人碰撞时，是否从 self.bullets 组中删除该子弹。这里 True 表示删除。
+        #第二个 True：dokill2 参数，表示当子弹与外星人碰撞时，是否从 self.aliens 组中删除该外星人。这里 True 表示删除。
+        #collisions：返回值是一个字典，键是发生碰撞的子弹精灵，值是与该子弹碰撞的外星人精灵列表（一个子弹可能同时击中多个外星人，但通常游戏中一个子弹只击中一个外星人）。
+        collisions = pygame.sprite.groupcollide(self.bullets, self.aliens, True, True)
+
+        if not self.aliens:  #如果外星人群被消灭了 就删除现有的子弹 并创建一群新的外星人
+            self.bullets.empty()
+            self._create_fleet()
+
 
 
 #如果直接运行这个文件，就创建一个游戏实例并运行游戏      
