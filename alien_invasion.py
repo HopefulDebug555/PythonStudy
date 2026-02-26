@@ -15,6 +15,8 @@ import pygame
 from setting import Setting
 from ship import Ship
 from bullet import Bullet
+from alien import Alien
+
 
 #调试模式开关
 DEBUG = True
@@ -32,20 +34,27 @@ class AlienInvasion:
         #创建一个Setting类的实例 用于存储游戏设置
         self.setting = Setting()    
         if DEBUG:
+            #窗口模式
             self.screen = pygame.display.set_mode((self.setting.screen_width, self.setting.screen_height))
         else:
+            #全屏模式
             self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
             self.setting.screen_width = self.screen.get_rect().width
             self.setting.screen_height = self.screen.get_rect().height
 
         #创建一个用于存储子弹的编组
         self.bullets = pygame.sprite.Group()
-        
+        #创建一个用于存储外星人的编组
+        self.aliens = pygame.sprite.Group()
+
+        self._create_fleet()  #创建外星人群
+
         #设置窗口标题
         pygame.display.set_caption("Alien Invasion")
         
         #创建一艘飞船的实例
         self.ship = Ship(self)
+
     def run_game(self):
         """开始游戏的主循环"""
         #游戏主循环
@@ -54,6 +63,7 @@ class AlienInvasion:
             self._check_events()    #检查键盘和鼠标事件
             self.ship.update()      #更新飞船位置
             self.update_bullets()   #更新子弹位置
+            self.update_aliens()     #更新外星人位置
             self._update_screen()   #更新屏幕上的图像
             #设置每秒钟循环60次
             self.clock.tick(60)
@@ -107,6 +117,9 @@ class AlienInvasion:
             bullet.draw_bullet()
         #绘制飞船
         self.ship.blitme()  
+        #绘制外星人
+        self.aliens.draw(self.screen)
+
         pygame.display.flip()
 
     def _fire_bullet(self):
@@ -114,6 +127,53 @@ class AlienInvasion:
         if len(self.bullets) < self.setting.bullets_allowed:  #限制屏幕上最多只能有3颗子弹
             new_bullet = Bullet(self)
             self.bullets.add(new_bullet)
+
+    def _create_fleet(self):
+        """创建外星人群"""
+        #创建一个外星人
+        alien = Alien(self)
+        #计算一行可以容纳多少个外星人
+        alien_width,alien_height = alien.rect.size
+        current_x = alien_width
+        current_y = alien_height
+        while current_y < (self.setting.screen_height - 10*alien_height):
+            while current_x < (self.setting.screen_width - 2*alien_width):
+                #创建一个外星人并将其加入当前行
+                self._create_alien(current_x,current_y)
+                #更新current_x 以便为下一个外星人留出空间
+                current_x += 2 * alien_width
+            #更新current_y 以便为下一行外星人留出空间
+            current_y += 2 * alien_height
+            #重置current_x 以便为下一行的第一个外星人设置
+            current_x = alien_width
+
+    def _create_alien(self, x_position,y_position):
+        """在指定x位置创建一个外星人并将其加入编组aliens中"""
+        new_alien = Alien(self)
+        new_alien.x = x_position
+        new_alien.rect.x = x_position
+        new_alien.rect.y = y_position
+        self.aliens.add(new_alien)
+
+    def update_aliens(self):
+        """更新外星人群中所有外星人的位置"""
+        self.check_fleet_edges()  #检查外星人是否到达边缘
+        #更新外星人位置
+        self.aliens.update()
+
+    def check_fleet_edges(self):
+        """有外星人到达边缘时采取相应的措施"""
+        for alien in self.aliens.sprites():
+            if alien.check_edges():
+                self.change_fleet_direction()
+                break
+
+    def change_fleet_direction(self):
+        """将整群外星人下移 并改变它们的移动方向"""
+        for alien in self.aliens.sprites():
+            alien.rect.y += self.setting.fleet_drop_speed
+        self.setting.fleet_direction *= -1
+
 
     def update_bullets(self):
         """更新子弹的位置 并删除已消失的子弹"""
